@@ -1,16 +1,25 @@
 package com.mkyong.hashing;
 
-import com.fasterxml.jackson.core.JsonParser;
+import org.apache.http.client.HttpClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.Consts;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.fluent.*;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
-
+import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.json.JSONObject;
+import com.google.gson.JsonParser;
 import org.apache.http.Consts;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
@@ -19,8 +28,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+import java.util.Scanner;
 
-public class Main {
+
+public class BackendServer {
     public static HttpClient httpClient = HttpClientBuilder.create().build();
     public static void main(String[] args) throws java.io.IOException, Exception {
 
@@ -31,8 +42,8 @@ public class Main {
                         .add("client_secret", "2d2e352965bf8d6a4967381e8fdf1c4d539cc9a548a40aee60af375c4bf374af")
                         .add("scope", "read_content read_financial_data read_product_data read_user_profile")
                         .build()
-                    )
-                    .execute().returnContent();
+                )
+                .execute().returnContent();
 
         String accessToken = new ObjectMapper().readTree(c.asString()).get("access_token").asText();
 
@@ -53,6 +64,8 @@ public class Main {
 
         Main.renderInstruments(portfolio, accessToken);
 
+
+
         Main.renderIncreaseOptionInstruments(portfolio, accessToken);
 
         //To do: implement option of allowing user to schedule trade based on execution time
@@ -72,7 +85,7 @@ public class Main {
     //missing: add total dollar amount
     //Need to figure out value of stock and then just print (amount * value) as dollar value
     //change the system.out.println to render in front end instead of printing to console
-    public static void renderInstruments(Portfolio portfolio, String accessToken) throws Exception {
+    public static void renderInstruments(Portfolio portfolio) throws Exception {
 
         ArrayList<String> assetNames = portfolio.getCompleteListAssetNames();
 
@@ -103,11 +116,38 @@ public class Main {
         for (int i = 0; i < size; i++) {
 
             String assetName = assetNames.get(i);
+            int amount = 1;
 
             //To do:
             //Find a way to read input from user from dropdown menu/type and set it to amount
             //Until we find a way to do this use default value of 1
-            int amount = 1;
+
+            System.out.println("Please select how many shares of " + assetName + " you would consider buying (enter 0 if not considering) : ");
+
+            boolean validInput = false;
+
+            while (!validInput) {
+                System.out.println("Please enter integer: ");
+
+                Scanner userInput = new Scanner(System.in);
+
+                while (!userInput.hasNext());
+
+                String input = "";
+                if (userInput.hasNext()) {
+                    input = userInput.nextLine();
+                }
+                if (!BackendServer.isNumeric(input)) {
+                    validInput = false;
+                    System.out.println("Please enter a numeric integer value");
+                }
+
+                validInput = true;
+
+                amount = Integer.parseInt(input);
+            }
+
+
 
             Main.renderIncreaseOptionInstrument(portfolio, assetName, amount, accessToken);
 
@@ -117,13 +157,18 @@ public class Main {
 
     //To do:
     //Find a way to get actual optimal execution time from API instead of just an ID to show to user
-    public static void renderIncreaseOptionInstrument(Portfolio portfolio, String assetName, int amount, String accessToken) throws Exception {
+    public static void renderIncreaseOptionInstrument(Portfolio portfolio, String assetName, double amount, String accessToken) throws Exception {
+
+        if (amount == 0) {
+            return;
+        }
 
         TradePosition tradePosition = portfolio.getTrade(assetName);
 
         System.out.println("If you buy " + amount + " shares of " + assetName + " the best execution time ");
 
         //Find best execution time
+
         HttpPost requestPost = new HttpPost("https://api.marquee.gs.com/v1/risk/execution/pretrade");
         requestPost.setHeader("Authorization", "Bearer " + accessToken);
 
@@ -139,6 +184,20 @@ public class Main {
         System.out.println(" can be found response by using the following Marquee unique identifier " + response);
     }
 
+    public static boolean isNumeric (String strNum) {
+
+        if (strNum == null) {
+            return false;
+        }
+
+        try {
+            int a = Integer.parseInt(strNum);
+        } catch (NumberFormatException nfe) {
+            return false;
+        }
+
+        return true;
+    }
 
 
 

@@ -1,3 +1,4 @@
+package com.mkyong.hashing;
 public class TradePosition {
 
     private String name;

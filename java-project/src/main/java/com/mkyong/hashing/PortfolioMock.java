@@ -1,3 +1,4 @@
+package com.mkyong.hashing;
 public class PortfolioMock {
 
     private Portfolio portfolio;
